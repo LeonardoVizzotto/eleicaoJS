@@ -10,6 +10,8 @@ let next = (pid % max) + 1;
 let processos = ["1", "2", "3", "4"];
 
 let queroEscrever = false;
+let recebiToken = true;
+let timeout;
 
 app.use(bodyParser.json());
 
@@ -28,6 +30,7 @@ app.get("/", function(req, res) {
 });
 
 app.get("/token", function(req, res) {
+  recebiToken = true;
   let resposta = `token recebido pelo processo ${pid}`;
   res.send(resposta);
   if (queroEscrever) {
@@ -36,11 +39,11 @@ app.get("/token", function(req, res) {
       console.log("escrevi");
       enviaMsg();
       pedeEscrita();
-    }, 2000);
+    }, 1000);
   } else {
     setTimeout(() => {
       enviaMsg();
-    }, 2000);
+    }, 1000);
   }
 });
 
@@ -51,6 +54,11 @@ app.get("/morte", function(req, res) {
   let resposta = `processo ${p} eliminado pelo processo ${pid}`;
   console.log(resposta);
   res.send(resposta);
+});
+
+app.get("/ismorte", function(req, res) {
+  res.send(true);
+  perguntaMorte();
 });
 
 if (pid == 1) {
@@ -69,6 +77,13 @@ let enviaMsg = () => {
       res => {
         res.on("data", data => {
           console.log("" + data);
+          recebiToken = false;
+          clearTimeout(timeout);
+          timeout = setTimeout(() => {
+            if (!recebiToken) {
+              perguntaMorte();
+            }
+          }, 20000);
         });
       }
     )
@@ -99,6 +114,32 @@ let enviaMsgMorte = (p, morto) => {
     })
     .on("error", err => {
       console.log("deu muito ruim");
+    });
+};
+
+let perguntaMorte = () => {
+  console.log(`processo ${next} parece estar morto`);
+  http
+    .get(`http://127.0.0.1:300${next}/ismorte`, res => {
+      res.on("data", () => {
+        console.log(`processo ${next} esta vivo`);
+      });
+    })
+    .on("error", err => {
+      console.log(`processo ${next} está morto`);
+      let morto = next;
+      processos = processos.filter(p => p != next);
+      next = getNext();
+      return new Promise(resolve => {
+        processos.filter(pr => pr != pid).forEach(p => {
+          enviaMsgMorte(p, morto);
+        });
+        setTimeout(() => {
+          resolve();
+        }, 1000);
+      }).then(() => {
+        enviaMsg();
+      });
     });
 };
 
