@@ -1,7 +1,7 @@
 #!/bin/bash
 
-max=5
-for i in `seq 1 $max`
+max=4
+for i in `seq 0 $max`
 do
     node index.js $i $max &
 done

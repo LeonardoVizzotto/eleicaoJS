@@ -1,7 +1,7 @@
 #!/bin/bash
 
-max=5
-for i in `seq 1 $max`
+max=4
+for i in `seq 0 $max`
 do
     fuser -n tcp -k 300$i &
 done
