@@ -6,8 +6,8 @@ const app = express();
 
 const pid = process.argv[2];
 const max = process.argv[3];
-const next = (pid % max) + 1;
-let processos = [0, 1, 2, 3, 4];
+let next = (pid % max) + 1;
+let processos = ["1", "2", "3", "4"];
 
 let queroEscrever = false;
 
@@ -28,10 +28,7 @@ app.get("/", function(req, res) {
 });
 
 app.get("/token", function(req, res) {
-  let resposta = {
-    msg: `token recebido pelo processo ${pid}`,
-    next: next
-  };
+  let resposta = `token recebido pelo processo ${pid}`;
   res.send(resposta);
   if (queroEscrever) {
     setTimeout(() => {
@@ -39,12 +36,21 @@ app.get("/token", function(req, res) {
       console.log("escrevi");
       enviaMsg();
       pedeEscrita();
-    }, 1000);
+    }, 2000);
   } else {
     setTimeout(() => {
       enviaMsg();
-    }, 1000);
+    }, 2000);
   }
+});
+
+app.get("/morte", function(req, res) {
+  let p = req.query.id;
+  processos = processos.filter(pr => pr != p);
+  next = getNext();
+  let resposta = `processo ${p} eliminado pelo processo ${pid}`;
+  console.log(resposta);
+  res.send(resposta);
 });
 
 if (pid == 1) {
@@ -62,7 +68,7 @@ let enviaMsg = () => {
       },
       res => {
         res.on("data", data => {
-          console.log("" + data.msg);
+          console.log("" + data);
         });
       }
     )
@@ -71,8 +77,8 @@ let enviaMsg = () => {
       let morto = next;
       processos = processos.filter(p => p != next);
       next = getNext();
-      return new Promise(resolve, () => {
-        processos.forEach(p => {
+      return new Promise(resolve => {
+        processos.filter(pr => pr != pid).forEach(p => {
           enviaMsgMorte(p, morto);
         });
         setTimeout(() => {
@@ -88,7 +94,7 @@ let enviaMsgMorte = (p, morto) => {
   http
     .get(`http://127.0.0.1:300${p}/morte?id=${morto}`, res => {
       res.on("data", data => {
-        console.log("" + data.msg);
+        console.log("" + data);
       });
     })
     .on("error", err => {
@@ -114,8 +120,6 @@ function getRandom(min, max) {
 
 function getNext() {
   let index = processos.indexOf(pid);
-  if (index < processos.length) {
-    return processos[index + 1];
-  }
-  return processos[0];
+  let res = processos[(index + 1) % processos.length];
+  return res;
 }
