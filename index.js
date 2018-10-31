@@ -1,21 +1,27 @@
+const fs = require("fs");
 const express = require("express");
 const http = require("http");
 const bodyParser = require("body-parser");
 
 const app = express();
+app.use(bodyParser.json());
+
+const filepath = "output.txt";
+let port = 300;
 
 const pid = process.argv[2];
 const max = process.argv[3];
 let next = (pid % max) + 1;
-let processos = ["1", "2", "3", "4"];
+let processos = [];
+
+for(let i = 1; i <= max; i++){
+  processos.push(`${i}`);
+}
 
 let queroEscrever = false;
 let recebiToken = true;
 let timeout;
 
-app.use(bodyParser.json());
-
-let port = 300;
 port += pid;
 
 app.listen(port, err => {
@@ -25,6 +31,7 @@ app.listen(port, err => {
   console.log(`server is listening on ${port}`);
 });
 
+//-------------Rotas-------------
 app.get("/", function(req, res) {
   res.send(`meu processo é ${pid}`);
 });
@@ -36,6 +43,7 @@ app.get("/token", function(req, res) {
   if (queroEscrever) {
     setTimeout(() => {
       queroEscrever = false;
+      fs.appendFileSync(filepath, `Processo ${pid} escreveu no arquivo\n`);
       console.log("escrevi");
       enviaMsg();
       pedeEscrita();
@@ -58,13 +66,9 @@ app.get("/morte", function(req, res) {
 
 app.get("/ismorte", function(req, res) {
   res.send(true);
-  perguntaMorte();
 });
 
-if (pid == 1) {
-  setTimeout(() => enviaMsg(), 5000);
-}
-
+//----------Comunicação----------
 let enviaMsg = () => {
   console.log(`enviando token para o processo ${next}`);
   http
@@ -143,8 +147,7 @@ let perguntaMorte = () => {
     });
 };
 
-pedeEscrita(pid == 1);
-
+//-----------Outras Funções-----------
 function pedeEscrita(force) {
   let time = getRandom(5, 10);
   if (force) {
@@ -163,4 +166,11 @@ function getNext() {
   let index = processos.indexOf(pid);
   let res = processos[(index + 1) % processos.length];
   return res;
+}
+
+//------------Inicialização--------------
+pedeEscrita(pid == 1);
+
+if (pid == 1) {
+  setTimeout(() => enviaMsg(), 5000);
 }
